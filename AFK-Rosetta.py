@@ -108,18 +108,13 @@ class Rosetta:
                 try: # Rosetta ask us to re-do the course
                     repeat_element = self.wait_course.until(EC.element_to_be_clickable((By.CSS_SELECTOR, repeat_selector)))
                     repeat_element.click()
-
-                except KeyboardInterrupt:
-                    looping = False
                 
                 except Exception: # Rosetta didn't asked us to re-do the course
                     skip_element = self.driver.find_element(By.CSS_SELECTOR, skip_selector)
                     skip_element.click()
         except:
-            pass
-        
-        self.driver.quit()
-        return
+            print("There was an error while looping throught the courses")
+            return
 
     def main(self, email: str, password: str):
         self.driver = webdriver.Chrome(options=self.options)
@@ -139,8 +134,12 @@ class Rosetta:
         print("The lesson was successfuly started !")
 
         print("Starting the lesson loop, press Ctrl + C to quit")
-        self.loop()
-        print("Thanks for playing !")
+        try:
+            self.loop()
+        except KeyboardInterrupt:
+            print("Thanks for playing !")
+            
+        self.driver.quit()
         return
 
 if __name__ == "__main__":
