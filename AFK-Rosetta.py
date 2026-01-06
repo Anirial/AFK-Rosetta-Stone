@@ -2,7 +2,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium import webdriver
+from threading import Thread
 from sys import argv
+from time import sleep
+
 
 class Rosetta:
     def __init__(self, timeout: int = 10, course_time: int = 30, headless: bool = True):
@@ -14,6 +17,7 @@ class Rosetta:
         self.options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36")
         self.options.add_argument("--window-size=1920,1080")
         self.options.add_argument("--mute-audio")
+
         prefs = {
             "profile.default_content_setting_values.media_stream_mic": 2  # Block the microphone to prevent Rosetta from asking
         }
@@ -99,48 +103,60 @@ class Rosetta:
             return False
 
     def loop(self) -> None:
-        try:
-            looping = True
-            skip_selector = "div[data-qa='skip']"
-            repeat_selector = "button[data-qa='RepeatButton']"
+        skip_selector = "div[data-qa='skip']"
+        repeat_selector = "button[data-qa='RepeatButton']"
 
-            while looping:
+        while self.looping:
+            try:
                 try: # Rosetta ask us to re-do the course
                     repeat_element = self.wait_course.until(EC.element_to_be_clickable((By.CSS_SELECTOR, repeat_selector)))
                     repeat_element.click()
-                
+                    
                 except Exception: # Rosetta didn't asked us to re-do the course
                     skip_element = self.driver.find_element(By.CSS_SELECTOR, skip_selector)
                     skip_element.click()
-        except:
-            print("There was an error while looping throught the courses")
-            return
+
+            except Exception: # Avoid using all CPU while page is loading
+                sleep(1)
+
+        return
 
     def main(self, email: str, password: str):
         self.driver = webdriver.Chrome(options=self.options)
         self.wait = WebDriverWait(self.driver, self.timeout)
         self.wait_course = WebDriverWait(self.driver, self.course_time)
-
-        print("Attempting to login into Rosetta (This can take up to 20sec with default timeout)")
-        if not self.login(email, password):
-            print("Login was unsuccessful, maybe the email or password is incorrect. You can also try to increase the timeout.")
-            return
-        print("Login to Rosetta was successful !")
-
-        print("Attempting to start the lesson (This can take up to 40sec with default timeout)")
-        if not self.start_lesson():
-            print("Could not start the lesson, try increasing the timeout")
-            return
-        print("The lesson was successfuly started !")
-
-        print("Starting the lesson loop, press Ctrl + C to quit")
         try:
-            self.loop()
-        except KeyboardInterrupt:
-            print("Thanks for playing !")
+            print("Attempting to login into Rosetta (This can take up to 20sec with default timeout)")
+            if not self.login(email, password):
+                print("Login was unsuccessful, maybe the email or password is incorrect. You can also try to increase the timeout.")
+                return
+            print("Login to Rosetta was successful !")
+
+            print("Attempting to start the lesson (This can take up to 40sec with default timeout)")
+            if not self.start_lesson():
+                print("Could not start the lesson, try increasing the timeout")
+                return
+            print("The lesson was successfuly started !")
+
+            print("Starting the lesson loop")
+
+            self.looping = True
+            loop_thread = Thread(target=self.loop)
+            loop_thread.start()
+
             
-        self.driver.quit()
-        return
+            while self.looping:
+                if input("Type 'q' to quit : ") == "q":
+                    print("Exiting")
+                    self.looping = False
+                    loop_thread.join()
+
+            self.driver.quit()
+                
+            
+        except Exception as e:
+            print(f"There was an error while looping throught the courses. Error : {e}")
+
 
 if __name__ == "__main__":
     if len(argv) == 3:
