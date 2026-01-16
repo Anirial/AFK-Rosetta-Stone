@@ -55,10 +55,20 @@ class Rosetta:
             element = self.wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, selector)))
             element.click()
 
+            # Go to unit selector menu
+            unit_selector = "span[data-qa='zoom_course_menu_unit_menu_open']"
+            unit_element = self.wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, unit_selector)))
+            self.driver.execute_script("arguments[0].click();", unit_element)
+
+            # Select first unit
+            unit_one_selector = "div[data-qa='UnitItem-1']"
+            unit_one_element = self.wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, unit_one_selector)))
+            self.driver.execute_script("arguments[0].click();", unit_one_element)
+
             # Select the first lesson
             lesson_selector = "div[data-qa='lesson-number-0']"
             lesson_element = self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, lesson_selector)))
-            lesson_element.click()
+            self.driver.execute_script("arguments[0].click();", lesson_element)
 
             # Select the first course
             course_selector = "button[data-qa^='PathButtonCourseMenu-PATH_']"
@@ -66,7 +76,7 @@ class Rosetta:
 
             all_course_element = self.driver.find_elements(By.CSS_SELECTOR, course_selector)
             course_element = all_course_element[0]
-            course_element.click()
+            self.driver.execute_script("arguments[0].click();", course_element)
 
             # Reset the score if asked to by rosetta
             reset_selector = "div[data-qa='ResetPathModal'] button[data-qa='PromptButton'][type='default']"
@@ -90,6 +100,15 @@ class Rosetta:
             microphone_selector = "button[data-qa='PromptButton'][type='default']"
             microphone_element = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, microphone_selector)))
             microphone_element.click()
+            
+            try:
+                # Select voice type if asked
+                voice_type_selector = "span[data-qa='misc_cancel']"
+                voice_type_element = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, voice_type_selector)))
+                self.driver.execute_script("arguments[0].click();", voice_type_element)
+            except Exception:
+                # We were not asked to select voice type, pass
+                pass
 
             # Check if the lesson was started successfuly
             skip_selector = "div[data-qa='skip']"
@@ -99,7 +118,7 @@ class Rosetta:
             
             except Exception:
                 return False
-        except:
+        except Exception:
             return False
 
     def loop(self) -> None:
